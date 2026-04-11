@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<!--
+  reconciliation.fxml
+  ───────────────────
+  Direct FXML equivalent of GSTReconciliationPanelV2 (Swing).
+
+  Layout mirrors the original Swing BorderLayout exactly:
+    NORTH  → headerPanel + inputWrapper (file inputs + summary) + filterPanel
+    CENTER → TableView (result table)
+
+  Every fx:id corresponds 1:1 to a @FXML field in GSTReconciliationController.
+-->
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.powerloom.controller.GSTReconciliationController"
+            prefWidth="1200" prefHeight="750"
+            stylesheets="@../css/app.css">
+
+    <!-- ══════════════════════════════════════════════════════════
+         NORTH — Title + File inputs + Summary + Filter radios
+         ══════════════════════════════════════════════════════════ -->
+    <top>
+        <VBox spacing="6" style="-fx-padding: 8 10 4 10;">
+
+            <!-- ── Header row: Title | Month | Year | Reset ── -->
+            <HBox spacing="12" alignment="CENTER">
+                <Label text="GST Reconciliation"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label text="Month"/>
+                <ComboBox fx:id="monthBox" prefWidth="80"/>
+                <Label text="Year"/>
+                <TextField fx:id="yearField" prefWidth="60"/>
+                <Button fx:id="resetBtn" text="Reset" onAction="#onReset"/>
+            </HBox>
+
+            <!-- ── File inputs + Summary box side by side ── -->
+            <HBox spacing="10">
+
+                <!-- File inputs (GridPane mirrors Swing GridBagLayout) -->
+                <GridPane hgap="8" vgap="6" HBox.hgrow="ALWAYS">
+                    <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
+                    <style>-fx-border-color: #aaaaaa; -fx-border-radius: 4;
+                        -fx-background-color: #fafafa; -fx-background-radius: 4;</style>
+
+                    <!-- Row 0 — B2B file -->
+                    <Label     text="B2B (ONLINE) File"   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <TextField fx:id="b2bFileField"        GridPane.columnIndex="1" GridPane.rowIndex="0"
+                               GridPane.hgrow="ALWAYS" minWidth="300"/>
+                    <Button    text="Browse"               GridPane.columnIndex="2" GridPane.rowIndex="0"
+                               onAction="#onBrowseB2B"/>
+                    <Label     text="Start Row"            GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+                    <TextField fx:id="b2bStartRowField"    GridPane.columnIndex="4" GridPane.rowIndex="0"
+                               text="7" prefWidth="55"/>
+
+                    <!-- Row 1 — Tally file -->
+                    <Label     text="Tally (GST) File"    GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <TextField fx:id="gstFileField"        GridPane.columnIndex="1" GridPane.rowIndex="1"
+                               GridPane.hgrow="ALWAYS"/>
+                    <Button    text="Browse"               GridPane.columnIndex="2" GridPane.rowIndex="1"
+                               onAction="#onBrowseGST"/>
+                    <Label     text="Start Row"            GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                    <TextField fx:id="gstStartRowField"    GridPane.columnIndex="4" GridPane.rowIndex="1"
+                               text="13" prefWidth="55"/>
+
+                    <!-- Row 2 — Compare -->
+                    <Button fx:id="compareBtn" text="Compare"
+                            onAction="#onCompare"
+                            GridPane.columnIndex="0" GridPane.rowIndex="2"
+                            GridPane.columnSpan="5"
+                            GridPane.halignment="CENTER"
+                            style="-fx-font-weight: bold; -fx-pref-width: 140px;"/>
+
+                    <!-- Row 3 — Export -->
+                    <Button fx:id="exportExcelBtn" text="Export Excel"
+                            onAction="#onExportExcel"
+                            GridPane.columnIndex="0" GridPane.rowIndex="3"
+                            GridPane.columnSpan="5"
+                            GridPane.halignment="CENTER"
+                            style="-fx-pref-width: 140px;"/>
+                </GridPane>
+
+                <!-- Summary box (right side, mirrors Swing TitledBorder "Summary") -->
+                <VBox spacing="5" minWidth="270"
+                      style="-fx-border-color: #aaaaaa; -fx-border-radius: 4;
+                     -fx-background-color: #fafafa; -fx-background-radius: 4;
+                     -fx-padding: 8;">
+                    <Label text="Summary"
+                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-underline: true;"/>
+
+                    <!-- Label colours match the original Swing colours exactly -->
+                    <Label fx:id="totalB2BLabel"      text="ONLINE ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: black;"/>
+                    <Label fx:id="totalGSTLabel"      text="TALLY ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: black;"/>
+                    <Label fx:id="matchedLabel"       text="MATCHED ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: #008000;"/>
+                    <Label fx:id="mismatchLabel"      text="MISMATCH ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: red;"/>
+                    <Label fx:id="missingTallyLabel"  text="MISSING TALLY ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: #FF8C00;"/>
+                    <Label fx:id="missingOnlineLabel" text="MISSING ONLINE ENTRY: 0"
+                           style="-fx-font-weight: bold; -fx-text-fill: #800080;"/>
+                </VBox>
+            </HBox>
+
+            <!-- ── View filter radio buttons (mirrors Swing FlowLayout(LEFT) filter panel) ── -->
+            <HBox spacing="12" alignment="CENTER_LEFT"
+                  style="-fx-padding: 4 0 0 0;">
+                <fx:define>
+                <ToggleGroup fx:id="viewFilter"/>
+                </fx:define>
+                <!-- v1: MATCH + MISMATCH (selected by default) -->
+                <RadioButton fx:id="v1" text="MATCH + MISMATCH"
+                             selected="true"
+                             toggleGroup="$viewFilter"
+                             onAction="#onFilterChanged"/>
+
+                <!-- v2: ONLINE - Prev month (label updated dynamically) -->
+                <RadioButton fx:id="v2" text="ONLINE - Previous Month Extra Entry"
+                             toggleGroup="$viewFilter"
+                             onAction="#onFilterChanged"/>
+
+                <!-- v3: ONLINE - Recon month (label updated dynamically) -->
+                <RadioButton fx:id="v3" text="ONLINE - Recon Month Extra Entry"
+                             toggleGroup="$viewFilter"
+                             onAction="#onFilterChanged"/>
+
+                <!-- v4: TALLY Extra -->
+                <RadioButton fx:id="v4" text="TALLY - Extra Entry"
+                             toggleGroup="$viewFilter"
+                             onAction="#onFilterChanged"/>
+
+                <!-- v5: ONLY MISMATCH -->
+                <RadioButton fx:id="v5" text="ONLY MISMATCH"
+                             toggleGroup="$viewFilter"
+                             onAction="#onFilterChanged"/>
+            </HBox>
+
+        </VBox>
+    </top>
+
+    <!-- ══════════════════════════════════════════════════════════
+         CENTER — Result TableView (mirrors Swing JTable / ScrollPane)
+         Columns match DefaultTableModel columns exactly:
+           Type[Row No] | GSTIN | Name | Invoice | Date |
+           Taxable | IGST | CGST | SGST | CESS
+         ══════════════════════════════════════════════════════════ -->
+    <center>
+        <ScrollPane fitToWidth="true" fitToHeight="true">
+            <TableView fx:id="resultTable"
+                       BorderPane.alignment="CENTER">
+                <columns>
+                    <TableColumn fx:id="colType"    text="Type [Row No]" prefWidth="160"/>
+                    <TableColumn fx:id="colGstin"   text="GSTIN"         prefWidth="160"/>
+                    <TableColumn fx:id="colName"    text="Name"          prefWidth="180"/>
+                    <TableColumn fx:id="colInvoice" text="Invoice"       prefWidth="130"/>
+                    <TableColumn fx:id="colDate"    text="Date"          prefWidth="100"/>
+                    <TableColumn fx:id="colTaxable" text="Taxable"       prefWidth="100"/>
+                    <TableColumn fx:id="colIgst"    text="IGST"          prefWidth="90"/>
+                    <TableColumn fx:id="colCgst"    text="CGST"          prefWidth="90"/>
+                    <TableColumn fx:id="colSgst"    text="SGST"          prefWidth="90"/>
+                    <TableColumn fx:id="colCess"    text="CESS"          prefWidth="80"/>
+                </columns>
+                <placeholder>
+                    <Label text="Load B2B and Tally files, then click Compare."/>
+                </placeholder>
+            </TableView>
+        </ScrollPane>
+    </center>
+
+</BorderPane>
