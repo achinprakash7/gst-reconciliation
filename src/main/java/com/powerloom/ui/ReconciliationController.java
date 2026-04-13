@@ -643,11 +643,11 @@ public class ReconciliationController implements Initializable {
         if (b == null || g == null) return;
         sourceList.add(new ResultRow(
                 "DIFF", "", "", "", "",
-                nullIfZero(round(b.getTaxable() - g.getTaxable())),
-                nullIfZero(round(b.getIgst()    - g.getIgst())),
-                nullIfZero(round(b.getCgst()    - g.getCgst())),
-                nullIfZero(round(b.getSgst()    - g.getSgst())),
-                nullIfZero(round(b.getCess()    - g.getCess()))
+                round(b.getTaxable() - g.getTaxable()),
+                round(b.getIgst()    - g.getIgst()),
+                round(b.getCgst()    - g.getCgst()),
+                round(b.getSgst()    - g.getSgst()),
+                round(b.getCess()    - g.getCess())
         ));
     }
 
@@ -798,6 +798,6 @@ public class ReconciliationController implements Initializable {
     }
 
     private double round(double v)      { return Math.round(v * 100.0) / 100.0; }
-    private Double nullIfZero(double v) { return v == 0.0 ? null : v; }
+    //private Double nullIfZero(double v) { return v == 0.0 ? null : v; }
     private String nvl(String s)        { return s == null ? "" : s; }
 }
