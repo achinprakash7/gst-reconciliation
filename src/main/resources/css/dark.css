@@ -1,0 +1,87 @@
+.root {
+    -fx-background-color: #1A1A2E;
+    -fx-font-family: 'Segoe UI', sans-serif;
+}
+
+.top-bar {
+    -fx-background-color: #16213E;
+    -fx-border-color: #0F3460;
+}
+
+.app-title { -fx-text-fill: #E0E0E0; }
+
+.card {
+    -fx-background-color: #16213E;
+    -fx-border-color: #0F3460;
+}
+
+.card-label { -fx-text-fill: #8899AA; }
+
+.file-row {
+    -fx-background-color: #0F3460;
+    -fx-border-color: #1A4A8A;
+}
+
+.filter-chip {
+    -fx-background-color: #0F3460;
+    -fx-text-fill: #8899AA;
+    -fx-border-color: #1A4A8A;
+}
+
+.filter-chip-active {
+    -fx-background-color: #7F77DD;
+    -fx-text-fill: #EEEDFE;
+    -fx-border-color: #7F77DD;
+}
+
+.table-view {
+    -fx-background-color: #16213E;
+    -fx-border-color: #0F3460;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #0F3460;
+}
+
+.table-view .column-header {
+    -fx-text-fill: #8899AA;
+    -fx-border-color: #1A4A8A;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: #16213E;
+    -fx-text-fill: #E0E0E0;
+}
+
+.table-view .table-row-cell:odd {
+    -fx-background-color: #1A2A4A;
+}
+
+.row-online      { -fx-background-color: #0D2137; }
+.row-tally       { -fx-background-color: #1A1035; }
+.row-diff-red    { -fx-background-color: #2D1515; }
+.row-diff-green  { -fx-background-color: #0D2010; }
+.row-total       { -fx-background-color: #2A200A; }
+
+.stat-online        { -fx-background-color: #0D2137; -fx-border-color: #378ADD; }
+.stat-tally         { -fx-background-color: #1A1035; -fx-border-color: #7F77DD; }
+.stat-match         { -fx-background-color: #0D2010; -fx-border-color: #639922; }
+.stat-mismatch      { -fx-background-color: #2D1515; -fx-border-color: #E24B4A; }
+.stat-missing-online{ -fx-background-color: #2A1A05; -fx-border-color: #EF9F27; }
+.stat-missing-tally { -fx-background-color: #2A0A15; -fx-border-color: #D4537E; }
+
+.stat-online .stat-label,  .stat-online .stat-value  { -fx-text-fill: #85B7EB; }
+.stat-tally .stat-label,   .stat-tally .stat-value   { -fx-text-fill: #AFA9EC; }
+.stat-match .stat-label,   .stat-match .stat-value   { -fx-text-fill: #97C459; }
+.stat-mismatch .stat-label,.stat-mismatch .stat-value{ -fx-text-fill: #F09595; }
+.stat-missing-online .stat-label,
+.stat-missing-online .stat-value                     { -fx-text-fill: #FAC775; }
+.stat-missing-tally .stat-label,
+.stat-missing-tally .stat-value                      { -fx-text-fill: #ED93B1; }
+
+.num-negative { -fx-text-fill: #F09595; }
+.num-positive { -fx-text-fill: #97C459; }
+.num-neutral  { -fx-text-fill: #E0E0E0; }
+
+.btn-primary  { -fx-background-color: #7F77DD; -fx-text-fill: #EEEDFE; }
+.btn-secondary{ -fx-background-color: #0F3460; -fx-text-fill: #E0E0E0; -fx-border-color:#1A4A8A; }

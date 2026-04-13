@@ -1,176 +1,478 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.geometry.Insets?>
 
-<!--
-  reconciliation.fxml
-  ───────────────────
-  Direct FXML equivalent of GSTReconciliationPanelV2 (Swing).
-
-  Layout mirrors the original Swing BorderLayout exactly:
-    NORTH  → headerPanel + inputWrapper (file inputs + summary) + filterPanel
-    CENTER → TableView (result table)
-
-  Every fx:id corresponds 1:1 to a @FXML field in GSTReconciliationController.
--->
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.powerloom.controller.GSTReconciliationController"
-            prefWidth="1200" prefHeight="750"
-            stylesheets="@../css/app.css">
+            fx:controller="com.powerloom.ui.ReconciliationController"
+            style="-fx-background-color:#F1EFE8;">
 
-    <!-- ══════════════════════════════════════════════════════════
-         NORTH — Title + File inputs + Summary + Filter radios
-         ══════════════════════════════════════════════════════════ -->
     <top>
-        <VBox spacing="6" style="-fx-padding: 8 10 4 10;">
+        <VBox spacing="8">
+            <padding><Insets top="10" right="10" bottom="6" left="10"/></padding>
 
-            <!-- ── Header row: Title | Month | Year | Reset ── -->
-            <HBox spacing="12" alignment="CENTER">
+            <!-- ── TOP BAR ─────────────────────────────────────────────────── -->
+            <HBox alignment="CENTER_LEFT" spacing="10"
+                  style="-fx-background-color:white;
+                         -fx-background-radius:12;
+                         -fx-border-color:#2C2C2A;
+                         -fx-border-width:1;
+                         -fx-border-radius:12;
+                         -fx-padding:10 16 10 16;">
+
                 <Label text="GST Reconciliation"
-                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-                <Label text="Month"/>
-                <ComboBox fx:id="monthBox" prefWidth="80"/>
-                <Label text="Year"/>
-                <TextField fx:id="yearField" prefWidth="60"/>
-                <Button fx:id="resetBtn" text="Reset" onAction="#onReset"/>
+                       style="-fx-font-size:15px;
+                              -fx-font-weight:bold;
+                              -fx-text-fill:#2C2C2A;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <!-- ── SEARCH ─────────────────────────────────────────── -->
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <TextField fx:id="searchField"
+                               promptText="Search GSTIN, name, invoice…"
+                               prefWidth="300"
+                               style="-fx-background-radius:8;
+                                          -fx-border-radius:8;
+                                          -fx-border-color:#2C2C2A;
+                                          -fx-border-width:1;
+                                          -fx-padding:6 10 6 10;"/>
+                    <Button text="Clear" onAction="#onClearSearch"
+                            style="-fx-background-color:#F1EFE8;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:5 12 5 12;
+                                       -fx-cursor:hand;"/>
+                </HBox>
+                <Label text="Month:"
+                       style="-fx-font-size:12px;-fx-text-fill:#888780;"/>
+                <ComboBox fx:id="monthBox" prefWidth="75"
+                          style="-fx-background-radius:8;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:1;
+                                 -fx-border-radius:8;"/>
+                <Label text="Year:"
+                       style="-fx-font-size:12px;-fx-text-fill:#888780;"/>
+                <TextField fx:id="yearField" prefWidth="65"
+                           style="-fx-background-radius:8;
+                                  -fx-border-color:#2C2C2A;
+                                  -fx-border-width:1;
+                                  -fx-border-radius:8;"/>
+                <Label fx:id="monthPill" text="— —"
+                       style="-fx-background-color:#E6F1FB;
+                              -fx-text-fill:#0C447C;
+                              -fx-background-radius:20;
+                              -fx-border-color:#378ADD;
+                              -fx-border-width:1;
+                              -fx-border-radius:20;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <Label fx:id="onlinePill" text="0 online"
+                       style="-fx-background-color:#EAF3DE;
+                              -fx-text-fill:#27500A;
+                              -fx-background-radius:20;
+                              -fx-border-color:#639922;
+                              -fx-border-width:1;
+                              -fx-border-radius:20;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <Label fx:id="tallyPill" text="0 tally"
+                       style="-fx-background-color:#FAEEDA;
+                              -fx-text-fill:#633806;
+                              -fx-background-radius:20;
+                              -fx-border-color:#EF9F27;
+                              -fx-border-width:1;
+                              -fx-border-radius:20;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <Button fx:id="darkToggleBtn" text="Dark mode"
+                        onAction="#onToggleDark"
+                        style="-fx-background-color:transparent;
+                               -fx-text-fill:#2C2C2A;
+                               -fx-border-color:#2C2C2A;
+                               -fx-border-width:1;
+                               -fx-border-radius:8;
+                               -fx-background-radius:8;
+                               -fx-padding:4 12 4 12;
+                               -fx-font-size:12px;
+                               -fx-cursor:hand;"/>
             </HBox>
 
-            <!-- ── File inputs + Summary box side by side ── -->
-            <HBox spacing="10">
+            <!-- ── FILES + SUMMARY ─────────────────────────────────────────── -->
+            <HBox spacing="10" alignment="TOP_LEFT">
 
-                <!-- File inputs (GridPane mirrors Swing GridBagLayout) -->
-                <GridPane hgap="8" vgap="6" HBox.hgrow="ALWAYS">
-                    <padding><Insets top="8" right="8" bottom="8" left="8"/></padding>
-                    <style>-fx-border-color: #aaaaaa; -fx-border-radius: 4;
-                        -fx-background-color: #fafafa; -fx-background-radius: 4;</style>
+                <!-- Files card -->
+                <VBox spacing="8" HBox.hgrow="ALWAYS"
+                      style="-fx-background-color:white;
+                             -fx-background-radius:12;
+                             -fx-border-color:#2C2C2A;
+                             -fx-border-width:1;
+                             -fx-border-radius:12;
+                             -fx-padding:14;">
 
-                    <!-- Row 0 — B2B file -->
-                    <Label     text="B2B (ONLINE) File"   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                    <TextField fx:id="b2bFileField"        GridPane.columnIndex="1" GridPane.rowIndex="0"
-                               GridPane.hgrow="ALWAYS" minWidth="300"/>
-                    <Button    text="Browse"               GridPane.columnIndex="2" GridPane.rowIndex="0"
-                               onAction="#onBrowseB2B"/>
-                    <Label     text="Start Row"            GridPane.columnIndex="3" GridPane.rowIndex="0"/>
-                    <TextField fx:id="b2bStartRowField"    GridPane.columnIndex="4" GridPane.rowIndex="0"
-                               text="7" prefWidth="55"/>
+                    <Label text="EXCEL FILES"
+                           style="-fx-font-size:11px;
+                                  -fx-font-weight:bold;
+                                  -fx-text-fill:#888780;"/>
 
-                    <!-- Row 1 — Tally file -->
-                    <Label     text="Tally (GST) File"    GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                    <TextField fx:id="gstFileField"        GridPane.columnIndex="1" GridPane.rowIndex="1"
-                               GridPane.hgrow="ALWAYS"/>
-                    <Button    text="Browse"               GridPane.columnIndex="2" GridPane.rowIndex="1"
-                               onAction="#onBrowseGST"/>
-                    <Label     text="Start Row"            GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                    <TextField fx:id="gstStartRowField"    GridPane.columnIndex="4" GridPane.rowIndex="1"
-                               text="13" prefWidth="55"/>
+                    <!-- ── B2B DROP ZONE ──────────────────────────────────── -->
+                    <HBox fx:id="b2bDropZone"
+                          spacing="8" alignment="CENTER_LEFT"
+                          style="-fx-background-color:#F4F8FD;
+                                 -fx-background-radius:8;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:1;
+                                 -fx-border-radius:8;
+                                 -fx-padding:8 10 8 10;">
 
-                    <!-- Row 2 — Compare -->
-                    <Button fx:id="compareBtn" text="Compare"
-                            onAction="#onCompare"
-                            GridPane.columnIndex="0" GridPane.rowIndex="2"
-                            GridPane.columnSpan="5"
-                            GridPane.halignment="CENTER"
-                            style="-fx-font-weight: bold; -fx-pref-width: 140px;"/>
+                        <Label text="B2B"
+                               style="-fx-background-color:#E6F1FB;
+                                      -fx-text-fill:#185FA5;
+                                      -fx-background-radius:6;
+                                      -fx-border-color:#378ADD;
+                                      -fx-border-width:1;
+                                      -fx-border-radius:6;
+                                      -fx-font-size:11px;
+                                      -fx-font-weight:bold;
+                                      -fx-padding:3 8 3 8;"/>
 
-                    <!-- Row 3 — Export -->
-                    <Button fx:id="exportExcelBtn" text="Export Excel"
-                            onAction="#onExportExcel"
-                            GridPane.columnIndex="0" GridPane.rowIndex="3"
-                            GridPane.columnSpan="5"
-                            GridPane.halignment="CENTER"
-                            style="-fx-pref-width: 140px;"/>
-                </GridPane>
+                        <Label fx:id="b2bDropHint"
+                               text="Drop .xlsx here or browse"
+                               style="-fx-text-fill:#B4B2A9;
+                                      -fx-font-size:11px;
+                                      -fx-font-style:italic;"/>
 
-                <!-- Summary box (right side, mirrors Swing TitledBorder "Summary") -->
-                <VBox spacing="5" minWidth="270"
-                      style="-fx-border-color: #aaaaaa; -fx-border-radius: 4;
-                     -fx-background-color: #fafafa; -fx-background-radius: 4;
-                     -fx-padding: 8;">
-                    <Label text="Summary"
-                           style="-fx-font-weight: bold; -fx-font-size: 13px; -fx-underline: true;"/>
+                        <TextField fx:id="b2bPathField"
+                                   promptText="B2B (Online) .xlsx"
+                                   HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color:transparent;
+                                          -fx-border-width:0;
+                                          -fx-font-size:12px;"/>
 
-                    <!-- Label colours match the original Swing colours exactly -->
-                    <Label fx:id="totalB2BLabel"      text="ONLINE ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: black;"/>
-                    <Label fx:id="totalGSTLabel"      text="TALLY ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: black;"/>
-                    <Label fx:id="matchedLabel"       text="MATCHED ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: #008000;"/>
-                    <Label fx:id="mismatchLabel"      text="MISMATCH ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: red;"/>
-                    <Label fx:id="missingTallyLabel"  text="MISSING TALLY ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: #FF8C00;"/>
-                    <Label fx:id="missingOnlineLabel" text="MISSING ONLINE ENTRY: 0"
-                           style="-fx-font-weight: bold; -fx-text-fill: #800080;"/>
+                        <Button text="Browse" onAction="#onBrowseB2B"
+                                style="-fx-background-color:#E6F1FB;
+                                       -fx-text-fill:#185FA5;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:5 14 5 14;
+                                       -fx-font-weight:bold;
+                                       -fx-cursor:hand;"/>
+
+                        <Label text="Start row:"
+                               style="-fx-font-size:12px;
+                                      -fx-text-fill:#888780;"/>
+
+                        <TextField fx:id="b2bStartRow" text="7" prefWidth="52"
+                                   style="-fx-background-radius:6;
+                                          -fx-border-color:#2C2C2A;
+                                          -fx-border-width:1;
+                                          -fx-border-radius:6;"/>
+                    </HBox>
+
+                    <!-- ── GST DROP ZONE ──────────────────────────────────── -->
+                    <HBox fx:id="gstDropZone"
+                          spacing="8" alignment="CENTER_LEFT"
+                          style="-fx-background-color:#F6F4FE;
+                                 -fx-background-radius:8;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:1;
+                                 -fx-border-radius:8;
+                                 -fx-padding:8 10 8 10;">
+
+                        <Label text="GST"
+                               style="-fx-background-color:#E1F5EE;
+                                      -fx-text-fill:#0F6E56;
+                                      -fx-background-radius:6;
+                                      -fx-border-color:#1D9E75;
+                                      -fx-border-width:1;
+                                      -fx-border-radius:6;
+                                      -fx-font-size:11px;
+                                      -fx-font-weight:bold;
+                                      -fx-padding:3 8 3 8;"/>
+
+                        <Label fx:id="gstDropHint"
+                               text="Drop .xlsx here or browse"
+                               style="-fx-text-fill:#B4B2A9;
+                                      -fx-font-size:11px;
+                                      -fx-font-style:italic;"/>
+
+                        <TextField fx:id="gstPathField"
+                                   promptText="Tally (GST) .xlsx"
+                                   HBox.hgrow="ALWAYS"
+                                   style="-fx-background-color:transparent;
+                                          -fx-border-width:0;
+                                          -fx-font-size:12px;"/>
+
+                        <Button text="Browse" onAction="#onBrowseGST"
+                                style="-fx-background-color:#E1F5EE;
+                                       -fx-text-fill:#0F6E56;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:5 14 5 14;
+                                       -fx-font-weight:bold;
+                                       -fx-cursor:hand;"/>
+
+                        <Label text="Start row:"
+                               style="-fx-font-size:12px;
+                                      -fx-text-fill:#888780;"/>
+
+                        <TextField fx:id="gstStartRow" text="13" prefWidth="52"
+                                   style="-fx-background-radius:6;
+                                          -fx-border-color:#2C2C2A;
+                                          -fx-border-width:1;
+                                          -fx-border-radius:6;"/>
+                    </HBox>
+
+
+
+                    <!-- ── ACTION BUTTONS ─────────────────────────────────── -->
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Button text="Compare" onAction="#onCompare"
+                                style="-fx-background-color:#534AB7;
+                                       -fx-text-fill:#EEEDFE;
+                                       -fx-background-radius:8;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-font-weight:bold;
+                                       -fx-padding:7 20 7 20;
+                                       -fx-cursor:hand;"/>
+                        <Button text="Export Excel" onAction="#onExportExcel"
+                                style="-fx-background-color:#EAF3DE;
+                                       -fx-text-fill:#27500A;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:7 14 7 14;
+                                       -fx-cursor:hand;"/>
+                        <Button text="Export PDF" onAction="#onExportPdf"
+                                style="-fx-background-color:#FAEEDA;
+                                       -fx-text-fill:#633806;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:7 14 7 14;
+                                       -fx-cursor:hand;"/>
+                        <Button text="Reset" onAction="#onReset"
+                                style="-fx-background-color:#FCEBEB;
+                                       -fx-text-fill:#791F1F;
+                                       -fx-border-color:#2C2C2A;
+                                       -fx-border-width:1;
+                                       -fx-border-radius:8;
+                                       -fx-background-radius:8;
+                                       -fx-padding:7 14 7 14;
+                                       -fx-cursor:hand;"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <ProgressBar fx:id="progressBar"
+                                     prefWidth="180" prefHeight="8"
+                                     visible="false"/>
+                        <Label fx:id="progressLabel" text=""
+                               style="-fx-font-size:11px;-fx-text-fill:#888780;"
+                               visible="false"/>
+                    </HBox>
+                </VBox>
+
+                <!-- ── SUMMARY CARD ───────────────────────────────────────── -->
+                <VBox spacing="6" minWidth="225"
+                      style="-fx-background-color:white;
+                             -fx-background-radius:12;
+                             -fx-border-color:#2C2C2A;
+                             -fx-border-width:1;
+                             -fx-border-radius:12;
+                             -fx-padding:14;">
+
+                    <Label text="SUMMARY"
+                           style="-fx-font-size:11px;
+                                  -fx-font-weight:bold;
+                                  -fx-text-fill:#888780;"/>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#E6F1FB;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Online total"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#0C447C;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="totalB2BVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#0C447C;"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#EEEDFE;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Tally total"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#3C3489;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="totalGSTVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#3C3489;"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#EAF3DE;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Matched"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#27500A;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="matchVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#27500A;"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#FCEBEB;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Mismatch"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#791F1F;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="mismatchVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#791F1F;"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#FAEEDA;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Online extra"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#633806;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="missingGSTVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#633806;"/>
+                    </HBox>
+
+                    <HBox alignment="CENTER_LEFT"
+                          style="-fx-background-color:#FBEAF0;
+                                 -fx-border-color:#2C2C2A;
+                                 -fx-border-width:0 0 0 4;
+                                 -fx-background-radius:0 8 8 0;
+                                 -fx-padding:8 12 8 12;">
+                        <Label text="Tally extra"
+                               style="-fx-font-size:12px;-fx-font-weight:bold;
+                                      -fx-text-fill:#72243E;"
+                               HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="missingB2BVal" text="0"
+                               style="-fx-font-size:16px;-fx-font-weight:bold;
+                                      -fx-text-fill:#72243E;"/>
+                    </HBox>
                 </VBox>
             </HBox>
 
-            <!-- ── View filter radio buttons (mirrors Swing FlowLayout(LEFT) filter panel) ── -->
-            <HBox spacing="12" alignment="CENTER_LEFT"
-                  style="-fx-padding: 4 0 0 0;">
-                <fx:define>
-                <ToggleGroup fx:id="viewFilter"/>
-                </fx:define>
-                <!-- v1: MATCH + MISMATCH (selected by default) -->
-                <RadioButton fx:id="v1" text="MATCH + MISMATCH"
-                             selected="true"
-                             toggleGroup="$viewFilter"
-                             onAction="#onFilterChanged"/>
+            <!-- ── FILTER CHIPS ─────────────────────────────────────────────── -->
+            <HBox spacing="8" alignment="CENTER_LEFT"
+                  style="-fx-background-color:white;
+                         -fx-background-radius:12;
+                         -fx-border-color:#2C2C2A;
+                         -fx-border-width:1;
+                         -fx-border-radius:12;
+                         -fx-padding:10 14 10 14;">
 
-                <!-- v2: ONLINE - Prev month (label updated dynamically) -->
-                <RadioButton fx:id="v2" text="ONLINE - Previous Month Extra Entry"
-                             toggleGroup="$viewFilter"
-                             onAction="#onFilterChanged"/>
+                <Label text="View:"
+                       style="-fx-font-size:12px;
+                              -fx-font-weight:bold;
+                              -fx-text-fill:#444441;"/>
 
-                <!-- v3: ONLINE - Recon month (label updated dynamically) -->
-                <RadioButton fx:id="v3" text="ONLINE - Recon Month Extra Entry"
-                             toggleGroup="$viewFilter"
-                             onAction="#onFilterChanged"/>
+                <ToggleButton fx:id="chip1"
+                              text="Match + Mismatch"
+                              onAction="#onChip1"/>
+                <ToggleButton fx:id="chip2"
+                              text="Online – Prev extra"
+                              onAction="#onChip2"/>
+                <ToggleButton fx:id="chip3"
+                              text="Online – Recon month"
+                              onAction="#onChip3"/>
+                <ToggleButton fx:id="chip4"
+                              text="Tally extra"
+                              onAction="#onChip4"/>
+                <ToggleButton fx:id="chip5"
+                              text="Only mismatch"
+                              onAction="#onChip5"/>
 
-                <!-- v4: TALLY Extra -->
-                <RadioButton fx:id="v4" text="TALLY - Extra Entry"
-                             toggleGroup="$viewFilter"
-                             onAction="#onFilterChanged"/>
+                <Region HBox.hgrow="ALWAYS"/>
 
-                <!-- v5: ONLY MISMATCH -->
-                <RadioButton fx:id="v5" text="ONLY MISMATCH"
-                             toggleGroup="$viewFilter"
-                             onAction="#onFilterChanged"/>
+
             </HBox>
-
         </VBox>
     </top>
 
-    <!-- ══════════════════════════════════════════════════════════
-         CENTER — Result TableView (mirrors Swing JTable / ScrollPane)
-         Columns match DefaultTableModel columns exactly:
-           Type[Row No] | GSTIN | Name | Invoice | Date |
-           Taxable | IGST | CGST | SGST | CESS
-         ══════════════════════════════════════════════════════════ -->
+    <!-- ── TABLE ───────────────────────────────────────────────────────────── -->
     <center>
-        <ScrollPane fitToWidth="true" fitToHeight="true">
-            <TableView fx:id="resultTable"
-                       BorderPane.alignment="CENTER">
-                <columns>
-                    <TableColumn fx:id="colType"    text="Type [Row No]" prefWidth="160"/>
-                    <TableColumn fx:id="colGstin"   text="GSTIN"         prefWidth="160"/>
-                    <TableColumn fx:id="colName"    text="Name"          prefWidth="180"/>
-                    <TableColumn fx:id="colInvoice" text="Invoice"       prefWidth="130"/>
-                    <TableColumn fx:id="colDate"    text="Date"          prefWidth="100"/>
-                    <TableColumn fx:id="colTaxable" text="Taxable"       prefWidth="100"/>
-                    <TableColumn fx:id="colIgst"    text="IGST"          prefWidth="90"/>
-                    <TableColumn fx:id="colCgst"    text="CGST"          prefWidth="90"/>
-                    <TableColumn fx:id="colSgst"    text="SGST"          prefWidth="90"/>
-                    <TableColumn fx:id="colCess"    text="CESS"          prefWidth="80"/>
-                </columns>
-                <placeholder>
-                    <Label text="Load B2B and Tally files, then click Compare."/>
-                </placeholder>
-            </TableView>
-        </ScrollPane>
+        <BorderPane style="-fx-padding:0 10 10 10;">
+            <center>
+                <TableView fx:id="tableView"
+                           style="-fx-background-color:white;
+                                  -fx-background-radius:12;
+                                  -fx-border-color:#2C2C2A;
+                                  -fx-border-width:1;
+                                  -fx-border-radius:12;">
+                    <columns>
+                        <TableColumn fx:id="typeCol"
+                                     text="Type [Row]"
+                                     minWidth="130" sortable="true"/>
+                        <TableColumn fx:id="gstinCol"
+                                     text="GSTIN"
+                                     minWidth="130" sortable="true"/>
+                        <TableColumn fx:id="nameCol"
+                                     text="Name"
+                                     minWidth="140" sortable="true"/>
+                        <TableColumn fx:id="invoiceCol"
+                                     text="Invoice"
+                                     minWidth="100" sortable="true"/>
+                        <TableColumn fx:id="dateCol"
+                                     text="Date"
+                                     minWidth="88"  sortable="true"/>
+                        <TableColumn fx:id="taxableCol"
+                                     text="Taxable"
+                                     minWidth="85"  sortable="true"/>
+                        <TableColumn fx:id="igstCol"
+                                     text="IGST"
+                                     minWidth="75"  sortable="true"/>
+                        <TableColumn fx:id="cgstCol"
+                                     text="CGST"
+                                     minWidth="75"  sortable="true"/>
+                        <TableColumn fx:id="sgstCol"
+                                     text="SGST"
+                                     minWidth="75"  sortable="true"/>
+                        <TableColumn fx:id="cessCol"
+                                     text="CESS"
+                                     minWidth="65"  sortable="true"/>
+                    </columns>
+                </TableView>
+            </center>
+        </BorderPane>
     </center>
 
 </BorderPane>

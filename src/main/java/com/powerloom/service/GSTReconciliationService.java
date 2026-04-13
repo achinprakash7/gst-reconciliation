@@ -1,16 +1,12 @@
 package com.powerloom.service;
 
+import com.powerloom.entity.ReconciliationResponse;
 import com.powerloom.entity.ReconciliationResult;
-import com.powerloom.entity.ReconciliationSession;
 import com.powerloom.entity.RowDataEntity;
-import com.powerloom.repository.SessionRepository;
-
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -19,161 +15,336 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class GSTReconciliationService {
 
-    private final SessionRepository sessionRepository;
+    private static final Logger log = LoggerFactory.getLogger(GSTReconciliationService.class);
 
-    // ===================== MAIN =====================
-    @Transactional
-    public List<ReconciliationResult> compare(
-            File b2bFile,
-            File gstFile,
-            int b2bStart,
-            int gstStart,
-            String monthName,
-            int month,
-            int year
-    ) throws Exception {
+    private static final String INVOICE_ENTRY_MATCH     = "INVOICE_ENTRY_MATCH";
+    private static final String INVOICE_ENTRY_NOT_MATCH = "INVOICE_ENTRY_NOT_MATCH";
 
-        // 🔥 STEP 1: CREATE SESSION FIRST
-        ReconciliationSession session = new ReconciliationSession();
-        session.setMonthName(monthName);
-        session.setMonthValue(month);
-        session.setYearValue(year);
-        session.setB2bFileName(b2bFile.getName());
-        session.setGstFileName(gstFile.getName());
+    // ─────────────────────────────────────────────────────────────────────────
+    // PUBLIC API
+    // ─────────────────────────────────────────────────────────────────────────
 
-        // 🔥 STEP 2: LOAD ROWS WITH SESSION
-        List<RowDataEntity> b2bList = loadRows(b2bFile, b2bStart, "B2B", session);
-        List<RowDataEntity> gstList = loadRows(gstFile, gstStart, "GST", session);
+    public List<ReconciliationResult> compare(File b2bFile, File gstFile,
+                                              int b2bStart, int gstStart) throws Exception {
 
-        // 🔥 MAPS FOR MATCHING
-        Map<String, RowDataEntity> gstMap = new HashMap<>();
-        for (RowDataEntity g : gstList) {
-            gstMap.put(g.key(), g);
-        }
+        // ── DEBUG: print all headers found in both files ──────────────────────
+        debugHeaders(b2bFile, b2bStart, "B2B");
+        debugHeaders(gstFile, gstStart, "GST");
 
-        Map<String, RowDataEntity> b2bMap = new HashMap<>();
-        for (RowDataEntity b : b2bList) {
-            b2bMap.put(b.key(), b);
-        }
+        Map<String, Set<String>> gstnDocNoMap = buildGstDocNoMap(gstFile, gstStart);
+        ReconciliationResponse   gstData      = loadGST(gstFile, gstStart);
+        ReconciliationResponse   b2bData      = loadB2B(b2bFile, b2bStart, gstnDocNoMap);
+
+        Map<String, RowDataEntity> b2bMap  = b2bData.getDataMap();
+        Map<String, RowDataEntity> gstMap  = gstData.getDataMap();
+        List<RowDataEntity>        b2bList = b2bData.getList();
+        List<RowDataEntity>        gstList = gstData.getList();
 
         List<ReconciliationResult> results = new ArrayList<>();
 
-        // ================= MATCH LOGIC =================
-        for (RowDataEntity b : b2bList) {
-
+        for (RowDataEntity b2bRow : b2bList) {
             ReconciliationResult r = new ReconciliationResult();
-            r.setSession(session);
-            r.setB2bRow(b);
-
-            RowDataEntity g = gstMap.get(b.key());
-
-            if (g != null) {
-                r.setGstRow(g);
-                r.setStatus(b.matches(g) ? "MATCH" : "MISMATCH");
+            r.setB2bRow(b2bRow);
+            if (INVOICE_ENTRY_MATCH.equals(b2bRow.getStatus())) {
+                RowDataEntity gstRow = gstMap.get(b2bRow.key());
+                r.setGstRow(gstRow);
+                r.setStatus(b2bRow.matches(gstRow) ? "MATCH" : "MISMATCH");
             } else {
                 r.setStatus("MISSING_IN_TALLY");
             }
-
             results.add(r);
         }
 
-        // ================= MISSING ONLINE =================
-        for (RowDataEntity g : gstList) {
-            if (!b2bMap.containsKey(g.key())) {
-
+        for (RowDataEntity gstRow : gstList) {
+            if (!b2bMap.containsKey(gstRow.key())) {
                 ReconciliationResult r = new ReconciliationResult();
-                r.setSession(session);
-                r.setGstRow(g);
+                r.setGstRow(gstRow);
                 r.setStatus("MISSING_IN_ONLINE");
-
                 results.add(r);
             }
         }
 
-        // ================= ATTACH TO SESSION =================
-        session.getRows().addAll(b2bList);
-        session.getRows().addAll(gstList);
-        session.getResults().addAll(results);
-
-        // 🔥 SAVE (CASCADE WILL HANDLE ALL)
-        sessionRepository.save(session);
-
-        log.info("Reconciliation Done: {} records", results.size());
+        log.info("Online count : {}", b2bList.size());
+        log.info("Tally count  : {}", gstList.size());
+        results.stream()
+                .collect(Collectors.groupingBy(ReconciliationResult::getStatus,
+                        Collectors.counting()))
+                .forEach((s, c) -> log.info("{} -> {}", s, c));
 
         return results;
     }
 
-    // ===================== LOAD EXCEL =====================
-    private List<RowDataEntity> loadRows(
-            File file,
-            int startRow,
-            String source,
-            ReconciliationSession session
-    ) throws Exception {
+    // ─────────────────────────────────────────────────────────────────────────
+    // DEBUG HELPER — prints every header found so you can see the exact strings
+    // ─────────────────────────────────────────────────────────────────────────
 
-        List<RowDataEntity> list = new ArrayList<>();
-
+    private void debugHeaders(File file, int startRow, String label) {
         try (Workbook wb = new XSSFWorkbook(new FileInputStream(file))) {
-
             Sheet sheet = wb.getSheetAt(0);
-            Map<String, Integer> header = header(sheet.getRow(startRow - 3));
-
-            for (int i = startRow - 1; i <= sheet.getLastRowNum(); i++) {
-
-                Row row = sheet.getRow(i);
-                if (row == null || isEmpty(row)) continue;
-
-                RowDataEntity d = new RowDataEntity();
-
-                // 🔥 VERY IMPORTANT
-                d.setSession(session);
-
-                d.setSource(source);
-                d.setRowNo(i + 1);
-
-                if (source.equals("B2B")) {
-                    d.setGstin(str(row, header.get("gstin of supplier")));
-                    d.setInvoiceNo(str(row, header.get("invoice number")));
-                    d.setCoreDocNo(d.getInvoiceNo());
-                } else {
-                    d.setGstin(str(row, header.get("party gstin/uin")));
-                    d.setInvoiceNo(str(row, header.get("doc no.")));
-                    d.setCoreDocNo(d.getInvoiceNo().split("/")[0]);
+            // try header row at startRow-3, startRow-2, startRow-1
+            for (int offset = 1; offset <= 3; offset++) {
+                int rowIdx = startRow - offset;
+                if (rowIdx < 0) continue;
+                Row row = sheet.getRow(rowIdx);
+                if (row == null) continue;
+                List<String> headers = new ArrayList<>();
+                for (Cell c : row) {
+                    String val = c.toString().trim();
+                    if (!val.isEmpty()) headers.add("[" + val + "]");
                 }
-
-                d.setTradeOrLegalName(str(row, header.get("trade/legal name")));
-
-                d.setDate(date(row, header.get(source.equals("B2B") ? "invoice date" : "date")));
-                d.setTaxable(num(row, header.get(source.equals("B2B") ? "taxable value (₹)" : "taxable")));
-                d.setIgst(num(row, header.get(source.equals("B2B") ? "integrated tax(₹)" : "igst")));
-                d.setCgst(num(row, header.get(source.equals("B2B") ? "central tax(₹)" : "cgst")));
-                d.setSgst(num(row, header.get(source.equals("B2B") ? "state/ut tax(₹)" : "sgst/")));
-                d.setCess(num(row, header.get("cess")));
-
-                list.add(d);
+                if (!headers.isEmpty()) {
+                    log.info("=== {} headers at Excel row {} (0-indexed {}) ===",
+                            label, rowIdx + 1, rowIdx);
+                    log.info("{}", String.join(" | ", headers));
+                }
             }
+        } catch (Exception e) {
+            log.error("debugHeaders failed for {}: {}", label, e.getMessage());
         }
-
-        return list;
     }
 
-    // ===================== UTIL =====================
-    private Map<String, Integer> header(Row r) {
-        Map<String, Integer> map = new HashMap<>();
-        if (r == null) return map;
+    // ─────────────────────────────────────────────────────────────────────────
+    // LOAD B2B
+    // ─────────────────────────────────────────────────────────────────────────
 
-        for (Cell c : r) {
-            if (c.getCellType() == CellType.STRING) {
-                map.put(c.getStringCellValue().trim().toLowerCase(), c.getColumnIndex());
+    private ReconciliationResponse loadB2B(File file, int startRow,
+                                           Map<String, Set<String>> gstnDocNoMap)
+            throws Exception {
+
+        ReconciliationResponse response = new ReconciliationResponse();
+        Map<String, RowDataEntity>   map      = new LinkedHashMap<>();
+
+        try (Workbook wb = new XSSFWorkbook(new FileInputStream(file))) {
+            Sheet sheet = wb.getSheetAt(0);
+
+            // ── resolve header row ────────────────────────────────────────────
+            // GSTR-2B files put the column header 3 rows above the first data row.
+            // We try offsets 3, 2, 1 and pick the row that has the most cells.
+            Map<String, Integer> h = bestHeaderRow(sheet, startRow, "gstin of supplier",
+                    "invoice number", "taxable value");
+
+            log.info("B2B header map: {}", h);
+
+            // ── data rows ─────────────────────────────────────────────────────
+            for (int i = startRow - 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowEmpty(row)) continue;
+
+                RowDataEntity d = new RowDataEntity();
+                d.setRowNo(i + 1);
+                d.setGstin(str(row, h.get("gstin of supplier")));
+                d.setInvoiceNo(str(row, h.get("invoice number")));
+                d.setTradeOrLegalName(str(row, h.get("trade/legal name")));
+                d.setDate(date(row, h.get("invoice date")));
+
+                // ── numeric columns — use fuzzy key lookup ────────────────────
+                d.setTaxable(numByKey(row, h, "taxable value"));
+                d.setIgst(numByKey(row, h, "integrated tax"));
+                d.setCgst(numByKey(row, h, "central tax"));
+                d.setSgst(numByKey(row, h, "state/ut tax"));
+                d.setCess(numByKey(row, h, "cess"));
+
+                // log first data row so you can verify values
+                if (i == startRow - 1) {
+                    log.info("B2B first data row [{}}]: gstin={} taxable={} igst={} cgst={} sgst={} cess={}",
+                            i + 1, d.getGstin(), d.getTaxable(),
+                            d.getIgst(), d.getCgst(), d.getSgst(), d.getCess());
+                }
+
+                // ── match invoice to tally doc no ─────────────────────────────
+                Set<String> gstDocNoSet = gstnDocNoMap.get(d.getGstin());
+                if (gstDocNoSet == null) {
+                    d.setCoreDocNo(d.getInvoiceNo());
+                    d.setStatus(INVOICE_ENTRY_NOT_MATCH);
+                } else {
+                    Optional<String> match = gstDocNoSet.stream()
+                            .filter(docNo -> d.getInvoiceNo() != null
+                                    && d.getInvoiceNo().contains(docNo))
+                            .findFirst();
+                    if (match.isPresent()) {
+                        d.setCoreDocNo(match.get());
+                        d.setStatus(INVOICE_ENTRY_MATCH);
+                    } else {
+                        d.setCoreDocNo(d.getInvoiceNo());
+                        d.setStatus(INVOICE_ENTRY_NOT_MATCH);
+                        log.info("No match: invoice={} gstin={} available={}",
+                                d.getInvoiceNo(), d.getGstin(), gstDocNoSet);
+                    }
+                }
+
+                map.put(d.key(), d);
+                response.getList().add(d);
             }
         }
-        return map;
+
+        response.setDataMap(map);
+        return response;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LOAD GST (TALLY)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private ReconciliationResponse loadGST(File file, int startRow) throws Exception {
+
+        ReconciliationResponse response = new ReconciliationResponse();
+        Map<String, RowDataEntity>   map      = new LinkedHashMap<>();
+
+        try (Workbook wb = new XSSFWorkbook(new FileInputStream(file))) {
+            Sheet sheet = wb.getSheetAt(0);
+            Map<String, Integer> h = bestHeaderRow(sheet, startRow,
+                    "party gstin/uin", "doc no.", "taxable");
+
+            log.info("GST header map: {}", h);
+
+            for (int i = startRow - 1; i < sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowEmpty(row)) continue;
+
+                RowDataEntity d = new RowDataEntity();
+                d.setRowNo(i + 1);
+                d.setGstin(str(row, h.get("party gstin/uin")));
+                d.setInvoiceNo(str(row, h.get("doc no.")));
+                d.setCoreDocNo(
+                        d.getInvoiceNo() != null && d.getInvoiceNo().contains("/")
+                                ? d.getInvoiceNo().split("/")[0]
+                                : d.getInvoiceNo()
+                );
+                d.setTradeOrLegalName(str(row, h.get("particulars")));
+                d.setDate(date(row, h.get("date")));
+                d.setTaxable(numByKey(row, h, "taxable"));
+                d.setIgst(numByKey(row, h, "igst"));
+                d.setCgst(numByKey(row, h, "cgst"));
+                d.setSgst(numByKey(row, h, "sgst"));
+                d.setCess(numByKey(row, h, "cess"));
+
+                RowDataEntity existing = map.put(d.key(), d);
+                if (existing != null) log.warn("Duplicate GST key: {}", d.key());
+                response.getList().add(d);
+            }
+        }
+
+        response.setDataMap(map);
+        return response;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // BUILD GSTN → DOC-NO MAP
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Map<String, Set<String>> buildGstDocNoMap(File file, int startRow)
+            throws Exception {
+
+        Map<String, Set<String>> gstDocMap = new HashMap<>();
+
+        try (Workbook wb = new XSSFWorkbook(new FileInputStream(file))) {
+            Sheet sheet = wb.getSheetAt(0);
+            Map<String, Integer> h = bestHeaderRow(sheet, startRow,
+                    "party gstin/uin", "doc no.", "taxable");
+
+            for (int i = startRow - 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isRowEmpty(row)) continue;
+
+                String gstin     = str(row, h.get("party gstin/uin"));
+                String invoiceNo = str(row, h.get("doc no."));
+                if (gstin.isEmpty() || invoiceNo.isEmpty()) continue;
+
+                String coreInvoice = invoiceNo.contains("/")
+                        ? invoiceNo.split("/")[0] : invoiceNo;
+
+                gstDocMap.computeIfAbsent(gstin, k -> new HashSet<>()).add(coreInvoice);
+            }
+        }
+
+        return gstDocMap;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HEADER ROW RESOLVER
+    // Tries offsets 3, 2, 1 above startRow; picks the row whose normalised
+    // headers contain the most of the required keys.
+    // This handles files where headers are 2 rows above instead of 3.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Map<String, Integer> bestHeaderRow(Sheet sheet, int startRow,
+                                               String... requiredKeys) {
+        Map<String, Integer> best = Collections.emptyMap();
+        int bestScore = -1;
+
+        for (int offset = 1; offset <= 4; offset++) {
+            int rowIdx = startRow - offset - 1; // convert to 0-based
+            if (rowIdx < 0) continue;
+            Row row = sheet.getRow(rowIdx);
+            if (row == null) continue;
+
+            Map<String, Integer> candidate = header(row);
+            int score = 0;
+            for (String key : requiredKeys) {
+                // fuzzy: check if any header key contains the required key
+                for (String h : candidate.keySet()) {
+                    if (h.contains(key)) { score++; break; }
+                }
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // POI HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Build header map: normalised cell text → column index.
+     * Normalisation: trim + lowercase + collapse multiple spaces + strip ₹ symbol.
+     */
+    private Map<String, Integer> header(Row r) {
+        Map<String, Integer> m = new HashMap<>();
+        if (r == null) return m;
+        for (Cell c : r) {
+            String raw = c.toString();
+            String key = normaliseHeader(raw);
+            if (!key.isEmpty()) {
+                m.put(key, c.getColumnIndex());
+            }
+        }
+        return m;
+    }
+
+    private String normaliseHeader(String raw) {
+        return raw
+                .trim()
+                .toLowerCase()
+                .replace("₹", "")        // strip rupee symbol
+                .replace("\u20b9", "")   // strip ₹ as unicode escape
+                .replaceAll("\\(\\s*\\)", "") // strip empty parens
+                .replaceAll("\\s+", " ") // collapse spaces
+                .trim();
+    }
+
+    /**
+     * Fuzzy numeric lookup by partial key match.
+     * e.g. key="taxable value" matches header "taxable value (₹)"
+     * or "taxable value(rs)" or "taxable value"
+     */
+    private double numByKey(Row row, Map<String, Integer> headerMap, String partialKey) {
+        for (Map.Entry<String, Integer> entry : headerMap.entrySet()) {
+            if (entry.getKey().contains(partialKey)) {
+                return num(row, entry.getValue());
+            }
+        }
+        log.warn("No column found for key '{}' in row {}", partialKey, row.getRowNum() + 1);
+        return 0;
     }
 
     private String str(Row r, Integer c) {
@@ -183,55 +354,94 @@ public class GSTReconciliationService {
         return cell.toString().trim();
     }
 
+    /**
+     * Robust number reader — handles NUMERIC, STRING, FORMULA, and BLANK cell types.
+     */
     private double num(Row r, Integer c) {
         if (c == null) return 0;
         Cell cell = r.getCell(c);
         if (cell == null) return 0;
 
-        try {
-            if (cell.getCellType() == CellType.NUMERIC) return cell.getNumericCellValue();
-            if (cell.getCellType() == CellType.STRING) return Double.parseDouble(cell.getStringCellValue());
-        } catch (Exception ignored) {
+        switch (cell.getCellType()) {
+
+            case NUMERIC:
+                return cell.getNumericCellValue();
+
+            case FORMULA:
+                // evaluate formula result
+                try {
+                    CellType cached = cell.getCachedFormulaResultType();
+                    if (cached == CellType.NUMERIC)
+                        return cell.getNumericCellValue();
+                    if (cached == CellType.STRING)
+                        return parseDouble(cell.getStringCellValue());
+                } catch (Exception e) {
+                    log.warn("Formula eval failed at col {}: {}", c, e.getMessage());
+                }
+                return 0;
+
+            case STRING:
+                return parseDouble(cell.getStringCellValue());
+
+            case BLANK:
+            default:
+                return 0;
         }
-        return 0;
+    }
+
+    /** Parse a string that may contain commas, spaces, or be empty. */
+    private double parseDouble(String raw) {
+        if (raw == null || raw.isBlank()) return 0;
+        try {
+            return Double.parseDouble(
+                    raw.trim()
+                            .replace(",", "")
+                            .replace(" ", "")
+            );
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     private LocalDate date(Row r, Integer c) {
         if (c == null) return null;
         Cell cell = r.getCell(c);
         if (cell == null) return null;
-
         try {
-            if (cell.getCellType() == CellType.NUMERIC) {
-                return cell.getDateCellValue().toInstant()
-                        .atZone(ZoneId.systemDefault()).toLocalDate();
+            switch (cell.getCellType()) {
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell))
+                        return cell.getDateCellValue()
+                                .toInstant()
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate();
+                    break;
+                case STRING:
+                    return parseDate(cell.getStringCellValue().trim());
+                default:
+                    break;
             }
-            if (cell.getCellType() == CellType.STRING) {
-                return parseDate(cell.getStringCellValue());
-            }
-        } catch (Exception ignored) {
-        }
-
+        } catch (Exception ignored) {}
         return null;
     }
+
     private LocalDate parseDate(String value) {
-        DateTimeFormatter[] formats = new DateTimeFormatter[]{
+        for (DateTimeFormatter fmt : new DateTimeFormatter[]{
                 DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd")
-        };
-
-        for (DateTimeFormatter f : formats) {
-            try {
-                return LocalDate.parse(value, f);
-            } catch (Exception ignored) {
-            }
+                DateTimeFormatter.ofPattern("yyyy-MM-dd"),
+                DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                DateTimeFormatter.ofPattern("d/M/yyyy")}) {
+            try { return LocalDate.parse(value, fmt); }
+            catch (Exception ignored) {}
         }
         return null;
     }
-    private boolean isEmpty(Row row) {
-        for (int i = row.getFirstCellNum(); i < row.getLastCellNum(); i++) {
-            Cell cell = row.getCell(i);
-            if (cell != null && !cell.toString().trim().isEmpty()) return false;
+
+    private boolean isRowEmpty(Row row) {
+        for (int c = row.getFirstCellNum(); c < row.getLastCellNum(); c++) {
+            Cell cell = row.getCell(c);
+            if (cell != null && cell.getCellType() != CellType.BLANK
+                    && !cell.toString().trim().isEmpty()) return false;
         }
         return true;
     }
