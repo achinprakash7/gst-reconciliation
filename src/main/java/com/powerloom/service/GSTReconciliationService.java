@@ -211,9 +211,13 @@ public class GSTReconciliationService {
                 d.setGstin(str(row, h.get("party gstin/uin")));
                 d.setInvoiceNo(str(row, h.get("doc no.")));
                 d.setCoreDocNo(
-                        d.getInvoiceNo() != null && d.getInvoiceNo().contains("/")
-                                ? d.getInvoiceNo().split("/")[0]
-                                : d.getInvoiceNo()
+                        d.getInvoiceNo() != null
+                                ? (
+                                d.getInvoiceNo().contains("/")
+                                        ? d.getInvoiceNo().split("/")[0]
+                                        : d.getInvoiceNo()
+                        ).replaceFirst("^0+", "")
+                                : null
                 );
                 d.setTradeOrLegalName(str(row, h.get("particulars")));
                 d.setDate(date(row, h.get("date")));
@@ -257,6 +261,7 @@ public class GSTReconciliationService {
 
                 String coreInvoice = invoiceNo.contains("/")
                         ? invoiceNo.split("/")[0] : invoiceNo;
+                coreInvoice = coreInvoice.replaceFirst("^0+", "");
 
                 gstDocMap.computeIfAbsent(gstin, k -> new HashSet<>()).add(coreInvoice);
             }
@@ -351,7 +356,7 @@ public class GSTReconciliationService {
         if (c == null) return "";
         Cell cell = r.getCell(c);
         if (cell == null) return "";
-        return cell.toString().trim();
+        return cell.toString().trim().toUpperCase();
     }
 
     /**

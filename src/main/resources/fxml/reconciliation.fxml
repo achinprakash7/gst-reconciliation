@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.powerloom.ui.ReconciliationController"
@@ -10,7 +10,9 @@
 
     <top>
         <VBox spacing="8">
-            <padding><Insets top="10" right="10" bottom="6" left="10"/></padding>
+            <padding>
+                <Insets top="10" right="10" bottom="6" left="10"/>
+            </padding>
 
             <!-- ── TOP BAR ─────────────────────────────────────────────────── -->
             <HBox alignment="CENTER_LEFT" spacing="10"
@@ -25,7 +27,21 @@
                        style="-fx-font-size:15px;
                               -fx-font-weight:bold;
                               -fx-text-fill:#2C2C2A;"/>
+
+                <Button fx:id="toggleTopBtn"
+                        text="Hide Option"
+                        onAction="#onToggleTopSection"
+                        style="-fx-background-color:#F1EFE8;
+                               -fx-border-color:#2C2C2A;
+                               -fx-border-width:1;
+                               -fx-border-radius:8;
+                               -fx-background-radius:8;
+                               -fx-padding:5 12 5 12;
+                               -fx-cursor:hand;"/>
+
                 <Region HBox.hgrow="ALWAYS"/>
+
+
                 <!-- ── SEARCH ─────────────────────────────────────────── -->
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <TextField fx:id="searchField"
@@ -106,7 +122,7 @@
             </HBox>
 
             <!-- ── FILES + SUMMARY ─────────────────────────────────────────── -->
-            <HBox spacing="10" alignment="TOP_LEFT">
+            <HBox fx:id="topSection" spacing="10" alignment="TOP_LEFT">
 
                 <!-- Files card -->
                 <VBox spacing="8" HBox.hgrow="ALWAYS"
@@ -132,7 +148,7 @@
                                  -fx-border-radius:8;
                                  -fx-padding:8 10 8 10;">
 
-                        <Label text="B2B"
+                        <Label text="B2B-ONLINE"
                                style="-fx-background-color:#E6F1FB;
                                       -fx-text-fill:#185FA5;
                                       -fx-background-radius:6;
@@ -188,7 +204,7 @@
                                  -fx-border-radius:8;
                                  -fx-padding:8 10 8 10;">
 
-                        <Label text="GST"
+                        <Label text="GST-TALLY"
                                style="-fx-background-color:#E1F5EE;
                                       -fx-text-fill:#0F6E56;
                                       -fx-background-radius:6;
@@ -233,7 +249,6 @@
                                           -fx-border-width:1;
                                           -fx-border-radius:6;"/>
                     </HBox>
-
 
 
                     <!-- ── ACTION BUTTONS ─────────────────────────────────── -->
@@ -286,7 +301,7 @@
                 </VBox>
 
                 <!-- ── SUMMARY CARD ───────────────────────────────────────── -->
-                <VBox spacing="6" minWidth="225"
+                <VBox fx:id="summaryVertical" spacing="6" minWidth="225"
                       style="-fx-background-color:white;
                              -fx-background-radius:12;
                              -fx-border-color:#2C2C2A;
@@ -391,6 +406,103 @@
                 </VBox>
             </HBox>
 
+            <HBox fx:id="summaryHorizontal"
+                  spacing="12"
+                  alignment="CENTER_LEFT"
+                  visible="false"
+                  managed="false"
+                  style="-fx-background-color:white;
+                         -fx-background-radius:12;
+                         -fx-border-color:#2C2C2A;
+                         -fx-border-width:1;
+                         -fx-border-radius:12;
+                         -fx-padding:8 14 8 14;">
+
+                <!-- Online -->
+                <Label text="Online:"/>
+                <Label fx:id="totalB2BValH"
+                       text="0"
+                       style="-fx-background-color:#E6F1FB;
+                              -fx-text-fill:#0C447C;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#378ADD;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <!-- Tally -->
+                <Label text="Tally:"/>
+                <Label fx:id="totalGSTValH"
+                       text="0"
+                       style="-fx-background-color:#EEEDFE;
+                              -fx-text-fill:#3C3489;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#6C63FF;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <!-- Match -->
+                <Label text="Match:"/>
+                <Label fx:id="matchValH"
+                       text="0"
+                       style="-fx-background-color:#EAF3DE;
+                              -fx-text-fill:#27500A;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#639922;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <!-- Mismatch -->
+                <Label text="Mismatch:"/>
+                <Label fx:id="mismatchValH"
+                       text="0"
+                       style="-fx-background-color:#FCEBEB;
+                              -fx-text-fill:#791F1F;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#D9534F;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <!-- Online extra -->
+                <Label text="Online extra:"/>
+                <Label fx:id="missingGSTValH"
+                       text="0"
+                       style="-fx-background-color:#FAEEDA;
+                              -fx-text-fill:#633806;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#EF9F27;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+
+                <!-- Tally extra -->
+                <Label text="Tally extra:"/>
+                <Label fx:id="missingB2BValH"
+                       text="0"
+                       style="-fx-background-color:#FBEAF0;
+                              -fx-text-fill:#72243E;
+                              -fx-background-radius:20;
+                              -fx-border-radius:20;
+                              -fx-border-color:#C94C7C;
+                              -fx-border-width:1;
+                              -fx-padding:3 10 3 10;
+                              -fx-font-size:11px;
+                              -fx-font-weight:bold;"/>
+            </HBox>
+
             <!-- ── FILTER CHIPS ─────────────────────────────────────────────── -->
             <HBox spacing="8" alignment="CENTER_LEFT"
                   style="-fx-background-color:white;
@@ -453,22 +565,22 @@
                                      minWidth="100" sortable="true"/>
                         <TableColumn fx:id="dateCol"
                                      text="Date"
-                                     minWidth="88"  sortable="true"/>
+                                     minWidth="88" sortable="true"/>
                         <TableColumn fx:id="taxableCol"
                                      text="Taxable"
-                                     minWidth="85"  sortable="true"/>
+                                     minWidth="85" sortable="true"/>
                         <TableColumn fx:id="igstCol"
                                      text="IGST"
-                                     minWidth="75"  sortable="true"/>
+                                     minWidth="75" sortable="true"/>
                         <TableColumn fx:id="cgstCol"
                                      text="CGST"
-                                     minWidth="75"  sortable="true"/>
+                                     minWidth="75" sortable="true"/>
                         <TableColumn fx:id="sgstCol"
                                      text="SGST"
-                                     minWidth="75"  sortable="true"/>
+                                     minWidth="75" sortable="true"/>
                         <TableColumn fx:id="cessCol"
                                      text="CESS"
-                                     minWidth="65"  sortable="true"/>
+                                     minWidth="65" sortable="true"/>
                     </columns>
                 </TableView>
             </center>

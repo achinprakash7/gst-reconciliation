@@ -1,6 +1,7 @@
 package com.powerloom.ui;
 
 import javafx.beans.property.*;
+import org.springframework.util.StringUtils;
 
 /**
  * ResultRow — one display row in the reconciliation TableView.
@@ -69,7 +70,8 @@ public class ResultRow {
                 || isNonZero(igst.get())
                 || isNonZero(cgst.get())
                 || isNonZero(sgst.get())
-                || isNonZero(cess.get());
+                || isNonZero(cess.get())
+                || StringUtils.hasText(date.get());
     }
 
     private boolean isNonZero(Double v) {

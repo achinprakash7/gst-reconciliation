@@ -7,6 +7,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import java.io.OutputStream;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -106,7 +107,7 @@ public class ExcelExportService {
                 d.getGstin(),
                 d.getTradeOrLegalName(),
                 d.getInvoiceNo(),
-                d.getDate() != null ? d.getDate().toString() : "",
+                d.getDate() != null ? d.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "",
                 d.getTaxable(),
                 d.getIgst(),
                 d.getCgst(),

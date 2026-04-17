@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -332,7 +333,7 @@ public class ExportPdfService {
                     nvl(d.getGstin()),
                     nvl(d.getTradeOrLegalName()),
                     nvl(d.getInvoiceNo()),
-                    d.getDate() != null ? d.getDate().toString() : "",
+                    d.getDate() != null ? d.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "",
                     fmt(d.getTaxable()),
                     fmt(d.getIgst()),
                     fmt(d.getCgst()),

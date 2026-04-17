@@ -16,7 +16,9 @@ public class RowDataEntity {
         return eq(this.taxable, o.taxable)
                 && eq(this.igst, o.igst)
                 && eq(this.cgst, o.cgst)
-                && eq(this.sgst, o.sgst);
+                && eq(this.sgst, o.sgst)
+                && this.date.isEqual(o.date);
+
     }
 
     private boolean eq(double a, double b) { return a - b == 0; }

@@ -13,6 +13,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -27,7 +29,10 @@ import java.util.ResourceBundle;
 @Component
 public class ReconciliationController implements Initializable {
 
+
+
     // ── FXML — file rows ──────────────────────────────────────────────────────
+    @FXML private HBox      topSection;
     @FXML private HBox      b2bDropZone;
     @FXML private HBox      gstDropZone;
     @FXML private Label     b2bDropHint;
@@ -48,6 +53,7 @@ public class ReconciliationController implements Initializable {
     @FXML private ToggleButton chip3;
     @FXML private ToggleButton chip4;
     @FXML private ToggleButton chip5;
+    @FXML private Button       toggleTopBtn;
 
     // ── FXML — table ──────────────────────────────────────────────────────────
     @FXML private TableView<ResultRow>           tableView;
@@ -63,15 +69,26 @@ public class ReconciliationController implements Initializable {
     @FXML private TableColumn<ResultRow, Double> cessCol;
 
     // ── FXML — summary labels ─────────────────────────────────────────────────
+    @FXML private VBox summaryVertical;
+    @FXML private HBox summaryHorizontal;
     @FXML private Label totalB2BVal;
     @FXML private Label totalGSTVal;
     @FXML private Label matchVal;
     @FXML private Label mismatchVal;
     @FXML private Label missingGSTVal;
     @FXML private Label missingB2BVal;
+
+
     @FXML private Label monthPill;
     @FXML private Label onlinePill;
     @FXML private Label tallyPill;
+
+    @FXML private Label totalB2BValH;
+    @FXML private Label totalGSTValH;
+    @FXML private Label matchValH;
+    @FXML private Label mismatchValH;
+    @FXML private Label missingGSTValH;
+    @FXML private Label missingB2BValH;
 
     // ── FXML — progress + dark mode ───────────────────────────────────────────
     @FXML private ProgressBar progressBar;
@@ -416,6 +433,35 @@ public class ReconciliationController implements Initializable {
     @FXML private void onChip4() { setActiveChip(4); renderTable(); }
     @FXML private void onChip5() { setActiveChip(5); renderTable(); }
 
+    @FXML
+    private void onToggleTopSection() {
+        boolean isVisible = topSection.isVisible();
+
+        // Toggle top section
+        topSection.setVisible(!isVisible);
+        topSection.setManaged(!isVisible);
+
+        // Toggle summary layout
+        summaryVertical.setVisible(!isVisible);
+        summaryVertical.setManaged(!isVisible);
+
+        summaryHorizontal.setVisible(isVisible);
+        summaryHorizontal.setManaged(isVisible);
+
+        toggleTopBtn.setText(isVisible ? "Show Option" : "Hide Option");
+
+        syncHorizontalSummary();
+    }
+
+    private void syncHorizontalSummary() {
+        totalB2BValH.setText(totalB2BVal.getText());
+        totalGSTValH.setText(totalGSTVal.getText());
+        matchValH.setText(matchVal.getText());
+        mismatchValH.setText(mismatchVal.getText());
+        missingGSTValH.setText(missingGSTVal.getText());
+        missingB2BValH.setText(missingB2BVal.getText());
+    }
+
     private void setActiveChip(int n) {
         activeChip = n;
         chip1.setStyle(CHIP_INACTIVE);
@@ -445,6 +491,8 @@ public class ReconciliationController implements Initializable {
     // ─────────────────────────────────────────────────────────────────────────
     // FXML ACTIONS
     // ─────────────────────────────────────────────────────────────────────────
+
+
 
     @FXML
     private void onCompare() {
@@ -496,6 +544,16 @@ public class ReconciliationController implements Initializable {
             renderTable();
             updateSummary();
             updatePills();
+
+            topSection.setVisible(false);
+            topSection.setManaged(false);
+            toggleTopBtn.setText("Show Option");
+
+            summaryHorizontal.setVisible(true);
+            summaryHorizontal.setManaged(true);
+
+            syncHorizontalSummary();
+
             toast("Compare complete — " + cachedResults.size() + " records.",
                     ToastNotification.Type.SUCCESS);
         });
@@ -613,6 +671,7 @@ public class ReconciliationController implements Initializable {
                 RowDataEntity d = r.getB2bRow() != null
                         ? r.getB2bRow() : r.getGstRow();
                 addRowToTable(r.getStatus(), d);
+                sortRowDateWise();
             }
         }
 
@@ -620,6 +679,20 @@ public class ReconciliationController implements Initializable {
             if (isMatchView()) addMatchMismatchTotals(filtered);
             else               addSimpleTotal(filtered);
         }
+    }
+
+    private void sortRowDateWise(){
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        FXCollections.sort(sourceList, (r1, r2) -> {
+            try {
+                LocalDate d1 = LocalDate.parse(r1.getDate(), fmt);
+                LocalDate d2 = LocalDate.parse(r2.getDate(), fmt);
+                return d1.compareTo(d2);
+            } catch (Exception e) {
+                return 0; // fallback (keeps original order)
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -633,7 +706,7 @@ public class ReconciliationController implements Initializable {
                 nvl(d.getGstin()),
                 nvl(d.getTradeOrLegalName()),
                 nvl(d.getInvoiceNo()),
-                d.getDate() != null ? d.getDate().toString() : "",
+                d.getDate() != null ? d.getDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")) : "",
                 d.getTaxable(), d.getIgst(),
                 d.getCgst(),    d.getSgst(), d.getCess()
         ));
@@ -642,7 +715,8 @@ public class ReconciliationController implements Initializable {
     private void addDiffToTable(RowDataEntity b, RowDataEntity g) {
         if (b == null || g == null) return;
         sourceList.add(new ResultRow(
-                "DIFF", "", "", "", "",
+                "DIFF", "", "", "",
+                b.getDate().isEqual(g.getDate()) ? "" : "NOT_MATCH",
                 round(b.getTaxable() - g.getTaxable()),
                 round(b.getIgst()    - g.getIgst()),
                 round(b.getCgst()    - g.getCgst()),
