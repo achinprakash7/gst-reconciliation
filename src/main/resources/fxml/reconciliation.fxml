@@ -29,14 +29,14 @@
                 <!-- ── SEARCH ─────────────────────────────────────────── -->
                 <HBox spacing="8" alignment="CENTER_LEFT">
                     <TextField fx:id="searchField"
-                               promptText="Search GSTIN, name, invoice…"
+                               promptText="⌕ Search GSTIN, name, invoice…"
                                prefWidth="300"
                                style="-fx-background-radius:8;
                                           -fx-border-radius:8;
                                           -fx-border-color:#2C2C2A;
                                           -fx-border-width:1;
                                           -fx-padding:6 10 6 10;"/>
-                    <Button text="Clear" onAction="#onClearSearch"
+                    <Button text="X Clear" onAction="#onClearSearch"
                             style="-fx-background-color:#F1EFE8;
                                        -fx-border-color:#2C2C2A;
                                        -fx-border-width:1;
@@ -92,7 +92,7 @@
                               -fx-font-size:11px;
                               -fx-font-weight:bold;"/>
 
-                <Button fx:id="darkToggleBtn" text="Dark mode"
+                <Button fx:id="darkToggleBtn" text="☀ Light"
                         onAction="#onToggleDark"
                         style="-fx-background-color:transparent;
                                -fx-text-fill:#2C2C2A;
@@ -238,7 +238,7 @@
 
                     <!-- ── ACTION BUTTONS ─────────────────────────────────── -->
                     <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Button text="Compare" onAction="#onCompare"
+                        <Button text="▶ Compare" onAction="#onCompare"
                                 style="-fx-background-color:#534AB7;
                                        -fx-text-fill:#EEEDFE;
                                        -fx-background-radius:8;
@@ -248,7 +248,7 @@
                                        -fx-font-weight:bold;
                                        -fx-padding:7 20 7 20;
                                        -fx-cursor:hand;"/>
-                        <Button text="Export Excel" onAction="#onExportExcel"
+                        <Button text="⬇ Export Excel" onAction="#onExportExcel"
                                 style="-fx-background-color:#EAF3DE;
                                        -fx-text-fill:#27500A;
                                        -fx-border-color:#2C2C2A;
@@ -257,7 +257,7 @@
                                        -fx-background-radius:8;
                                        -fx-padding:7 14 7 14;
                                        -fx-cursor:hand;"/>
-                        <Button text="Export PDF" onAction="#onExportPdf"
+                        <Button text="⬇ Export PDF" onAction="#onExportPdf"
                                 style="-fx-background-color:#FAEEDA;
                                        -fx-text-fill:#633806;
                                        -fx-border-color:#2C2C2A;
@@ -266,7 +266,7 @@
                                        -fx-background-radius:8;
                                        -fx-padding:7 14 7 14;
                                        -fx-cursor:hand;"/>
-                        <Button text="Reset" onAction="#onReset"
+                        <Button text="↺ Reset" onAction="#onReset"
                                 style="-fx-background-color:#FCEBEB;
                                        -fx-text-fill:#791F1F;
                                        -fx-border-color:#2C2C2A;
@@ -470,6 +470,15 @@
                                      text="CESS"
                                      minWidth="65"  sortable="true"/>
                     </columns>
+                    <placeholder>
+                        <VBox alignment="CENTER" spacing="10" style="-fx-padding:60;">
+                            <Label text="📂" style="-fx-font-size:36px;-fx-opacity:.35;"/>
+                            <Label text="No data loaded"
+                                   style="-fx-font-size:15px;-fx-font-weight:bold;-fx-text-fill:#8892b0;"/>
+                            <Label text="Upload B2B and GST files then click Compare"
+                                   style="-fx-font-size:12px;-fx-text-fill:#4a5568;"/>
+                        </VBox>
+                    </placeholder>
                 </TableView>
             </center>
         </BorderPane>
